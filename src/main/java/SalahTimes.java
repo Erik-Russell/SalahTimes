@@ -135,7 +135,42 @@ class PrayerTimesCalculator {
  * Computes sun position and solar events
  */
 class SolarCalculator {
+    public Location location;
+    public Calendar localDate = new GregorianCalendar();
+    public int dayOfYear;
+    public int hour;
+    public SolarCalculator(Location location){
+        this.location = location;
+        localDate.setTime(new Date());
+        dayOfYear = localDate.get(Calendar.DAY_OF_YEAR);
+        hour = localDate.get(Calendar.HOUR);
+    }
 
+    public double getSunrise(Location location){
+        return 0.0;
+    }
+
+    private double fractionalYear(Calendar localDate){
+        /*
+         *   fractional year calculation, in radians
+         *   numerator with hour variable is cast to double to match return type
+         */
+        double fractionalYear = ((2 * Math.PI) / 365) * (dayOfYear - 1 + ((double) (hour - 12) / 24));
+        IO.println("DEBUG: fractional year = " + fractionalYear);
+        return fractionalYear;
+    }
+
+    private double eqTime(double y){
+        /*
+         *   equation of time in minutes
+         */
+        double eqTime = 229.18 *
+                (0.000075 +
+                        (0.001868 * Math.cos(y)) -
+                        (0.032077 * Math.sin(y)) -
+                        (0.014615 * Math.cos(2 * y) -
+                                (0.040849 * Math.sin(2 * y))));
+    }
 }
 
 /**
