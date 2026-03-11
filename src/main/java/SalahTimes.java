@@ -120,7 +120,15 @@ class Location {
  * Applies prayer time formulas to solar data
  */
 class PrayerTimesCalculator {
+    public double fajrAngle;
+    public double ishaAngle;
+    public Location location;
 
+    public PrayerTimesCalculator(Location location){
+        this.location = location;
+    }
+
+    SolarCalculator solarCalc = new SolarCalculator(this.location);
 }
 
 /**
