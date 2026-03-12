@@ -38,6 +38,7 @@ class Location {
     private static class Result {
         double latitude;
         double longitude;
+        String timezone;
     }
 
     private static class Response {
@@ -46,6 +47,7 @@ class Location {
 
     public double latitude;
     public double longitude;
+    public String timezone;
     public String cityName;
 
     public Location(String city){
@@ -92,6 +94,7 @@ class Location {
 
                 this.latitude = responseJson.results.getFirst().latitude;
                 this.longitude = responseJson.results.getFirst().longitude;
+                this.timezone = responseJson.results.getFirst().timezone;
             } else {
                 IO.println("ERR: Bad STATUS CODE");
             }
@@ -106,13 +109,19 @@ class Location {
         return longitude;
     }
 
+    public String getTimezone() {
+        return timezone;
+    }
+
     public String getCityName() {
         return cityName;
     }
 
     @Override
     public String toString() {
-        return "Latitude: " + getLatitude() + " Longitude: " + getLongitude();
+        return "Latitude: " + getLatitude() +
+                "\nLongitude: " + getLongitude() +
+                "\nTimezone: " + getTimezone();
     }
 }
 
@@ -126,7 +135,7 @@ class PrayerTimesCalculator {
 
     public PrayerTimesCalculator(Location location){
         this.location = location;
-        IO.println("Made a PrayerTimesCalculator with location: " + this.location);
+        IO.println("Made a PrayerTimesCalculator with location:\n" + this.location);
     }
 
     SolarCalculator solarCalc = new SolarCalculator(this.location);
