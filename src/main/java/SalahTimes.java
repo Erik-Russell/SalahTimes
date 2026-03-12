@@ -27,7 +27,7 @@ public class SalahTimes {
 
         IO.println(location.toString());
 
-        // call PTC with location
+        PrayerTimesCalculator prayerTimesCalculator = new PrayerTimesCalculator(location);
     }
 }
 
@@ -126,6 +126,7 @@ class PrayerTimesCalculator {
 
     public PrayerTimesCalculator(Location location){
         this.location = location;
+        IO.println("Made a PrayerTimesCalculator with location: " + this.location);
     }
 
     SolarCalculator solarCalc = new SolarCalculator(this.location);
@@ -160,16 +161,33 @@ class SolarCalculator {
         return fractionalYear;
     }
 
-    private double eqTime(double y){
+    public double eqTime(double y) {
         /*
          *   equation of time in minutes
          */
-        double eqTime = 229.18 *
+        double eqTime =  229.18 *
                 (0.000075 +
                         (0.001868 * Math.cos(y)) -
                         (0.032077 * Math.sin(y)) -
                         (0.014615 * Math.cos(2 * y) -
                                 (0.040849 * Math.sin(2 * y))));
+        IO.println("DEBUG: equation of time = " + eqTime);
+        return eqTime;
+    }
+
+    public double decl(double y) {
+        /*
+         *   solar declination angle in radians
+         */
+        double decl = 0.006918 -
+                (0.399912 * Math.cos(y)) +
+                (0.070257 * Math.sin(y)) -
+                (0.006758 * Math.cos(2 * y)) +
+                (0.000907 * Math.sin(2 * y)) -
+                (0.002697 * Math.cos(3 * y)) +
+                (0.00148 * Math.sin(3 * y));
+        IO.println("DEBUG: equation of time = " + decl);
+        return decl;
     }
 }
 
