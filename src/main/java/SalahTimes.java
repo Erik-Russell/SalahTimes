@@ -16,7 +16,7 @@ import com.google.gson.Gson;
  * SalahTimes
  */
 public class SalahTimes {
-    static void main(String[] args)
+    static void main()
             // IOException and InterruptedException required for HttpClient.send()
             throws IOException, InterruptedException {
         Scanner scanner = new Scanner(System.in);
@@ -60,12 +60,6 @@ class Location {
 
     public Location(String city){
         IO.println("Your city: " + city);
-        this.cityName = city;
-    }
-
-    public Location(double lat, double lon, String city){
-        this.latitude = lat;
-        this.longitude = lon;
         this.cityName = city;
     }
 
@@ -121,10 +115,6 @@ class Location {
         return timezone;
     }
 
-    public String getCityName() {
-        return cityName;
-    }
-
     @Override
     public String toString() {
         return "Latitude: " + getLatitude() +
@@ -149,23 +139,14 @@ class PrayerTimesCalculator {
 
     }
 
-    public void calculateSolarPositions(){
-        IO.println("fajr time: " + calcFajr());
-        IO.println("dhuhr time: " + calcDhuhr());
-        IO.println("Maghrib time: " + calcMaghrib());
-        IO.println("asr time: " + calcAsr());
-        IO.println("isha time: " + calcIsha());
-    }
-
     public PrayerSchedule calculateAll(){
-        PrayerSchedule prayerSchedule = new PrayerSchedule(
+        return new PrayerSchedule(
                 calcFajr(),
                 calcDhuhr(),
                 calcAsr(),
                 calcMaghrib(),
                 calcIsha()
         );
-        return prayerSchedule;
     }
 
     public LocalTime calcFajr(){
@@ -211,20 +192,10 @@ class SolarCalculator {
         this.hour = localDate.get(Calendar.HOUR);
     }
 
-    public double getSolarZenith(){
-        double y = fractionalYear(this.localDate);
-        double eqtime = eqTime(y);
-        double declination = decl(y);
-        double timeOffset = timeOffset(eqtime, this.location, this.location.timezone);
-
-        return 0.0;
-    }
-
     // convert timezone name to number offset
     public double getTimeZoneDouble(String timezone){
         ZoneId zone = ZoneId.of(timezone);
-        double offset = (double) ZonedDateTime.now(zone).getOffset().getTotalSeconds() / 3600;
-        return offset;
+        return (double) ZonedDateTime.now(zone).getOffset().getTotalSeconds() / 3600;
     }
 
     public LocalTime minutesToTime(double solarMinutes){
@@ -232,26 +203,22 @@ class SolarCalculator {
         int minutes = (int) (solarMinutes % 60);
         int seconds = (int) ((solarMinutes * 60) % 60);
 
-        LocalTime localTime = LocalTime.of(hours,minutes,seconds);
-
-        return localTime;
+        return LocalTime.of(hours,minutes,seconds);
     }
 
     public LocalTime getSolarNoon() {
         double offset = getTimeZoneDouble(this.location.timezone) * 60;
         double longitude = this.location.longitude;
-        double eqtime = eqTime(fractionalYear(this.localDate));
+        double equationOfTime = eqTime(fractionalYear());
 
-        double timeOfNoon = 720 - 4 * longitude - eqtime;
+        double timeOfNoon = 720 - 4 * longitude - equationOfTime;
 
-        LocalTime localTimeOfNoon = minutesToTime(timeOfNoon + offset);
-
-        return localTimeOfNoon;
+        return minutesToTime(timeOfNoon + offset);
     }
 
     public LocalTime getSunTimeOf(double degreesFromZenith, boolean isAfternoon) {
-        double y = fractionalYear(this.localDate);
-        double eqtime = eqTime(y);
+        double y = fractionalYear();
+        double equationOfTime = eqTime(y);
         double declination = decl(y);
         double latRadian = Math.toRadians(this.location.getLatitude());
         double offset = getTimeZoneDouble(this.location.timezone) * 60; //hour to minutes
@@ -268,15 +235,13 @@ class SolarCalculator {
         }
 
         // in minutes
-        double utcTimeOf = 720 - 4 * (this.location.getLongitude() + hourAngle) - eqtime;
+        double utcTimeOf = 720 - 4 * (this.location.getLongitude() + hourAngle) - equationOfTime;
 
-        LocalTime localTimeOf = minutesToTime(utcTimeOf + offset);
-
-        return localTimeOf;
+        return minutesToTime(utcTimeOf + offset);
     }
 
     public LocalTime getAsr(){
-        double y = fractionalYear(this.localDate);
+        double y = fractionalYear();
         double declination = decl(y);
         double latRadian = Math.toRadians(this.location.getLatitude());
 
@@ -292,47 +257,37 @@ class SolarCalculator {
         return getSolarNoon().plusSeconds(totalSeconds);
     }
 
-    private double fractionalYear(Calendar localDate){
+    private double fractionalYear(){
         /*
          *   fractional year calculation, in radians
          *   numerator with hour variable is cast to double to match return type
          */
-        double fractionalYear = ((2 * Math.PI) / 365) * (dayOfYear - 1 + ((double) (hour - 12) / 24));
-        return fractionalYear;
+        return ((2 * Math.PI) / 365) * (dayOfYear - 1 + ((double) (hour - 12) / 24));
     }
 
     public double eqTime(double y) {
         /*
          *   equation of time in minutes
          */
-        double eqTime =  229.18 *
+        return 229.18 *
                 (0.000075 +
                         (0.001868 * Math.cos(y)) -
                         (0.032077 * Math.sin(y)) -
                         (0.014615 * Math.cos(2 * y)) -
                                 (0.040849 * Math.sin(2 * y)));
-        return eqTime;
     }
 
     public double decl(double y) {
         /*
          *   solar declination angle in radians
          */
-        double decl = 0.006918 -
+        return 0.006918 -
                 (0.399912 * Math.cos(y)) +
                 (0.070257 * Math.sin(y)) -
                 (0.006758 * Math.cos(2 * y)) +
                 (0.000907 * Math.sin(2 * y)) -
                 (0.002697 * Math.cos(3 * y)) +
                 (0.00148 * Math.sin(3 * y));
-        return decl;
-    }
-
-    public double timeOffset(double eqTime, Location location, String timezone){
-        double offset = getTimeZoneDouble(timezone);
-
-        double timeOffset = eqTime + 4 * location.longitude - 60 * offset;
-        return timeOffset; // hours to minutes
     }
 
     public String toString() {
@@ -347,7 +302,7 @@ class SolarCalculator {
  * Stores the 5 calculated prayer times
  */
 class PrayerSchedule {
-    private Map<String, LocalTime> prayers;
+    private final Map<String, LocalTime> prayers;
 
     public PrayerSchedule(LocalTime fajr, LocalTime dhuhr, LocalTime asr,
                           LocalTime maghrib, LocalTime isha){
