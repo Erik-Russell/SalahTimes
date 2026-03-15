@@ -31,8 +31,11 @@ public class SalahTimes {
         //IO.println(location.toString());
 
         PrayerTimesCalculator prayerTimesCalculator = new PrayerTimesCalculator(location);
+        PrayerSchedule prayerSchedule = prayerTimesCalculator.calculateAll();
 
-        prayerTimesCalculator.calculateSolarPositions();
+        IO.println(prayerSchedule);
+
+
     }
 }
 
@@ -143,6 +146,7 @@ class PrayerTimesCalculator {
         this.location = location;
         //IO.println("Made a PrayerTimesCalculator with location:\n" + this.location);
         this.solarCalc = new SolarCalculator(this.location);
+
     }
 
     public void calculateSolarPositions(){
@@ -151,6 +155,17 @@ class PrayerTimesCalculator {
         IO.println("Maghrib time: " + calcMaghrib());
         IO.println("asr time: " + calcAsr());
         IO.println("isha time: " + calcIsha());
+    }
+
+    public PrayerSchedule calculateAll(){
+        PrayerSchedule prayerSchedule = new PrayerSchedule(
+                calcFajr(),
+                calcDhuhr(),
+                calcAsr(),
+                calcMaghrib(),
+                calcIsha()
+        );
+        return prayerSchedule;
     }
 
     public LocalTime calcFajr(){
@@ -332,5 +347,34 @@ class SolarCalculator {
  * Stores the 5 calculated prayer times
  */
 class PrayerSchedule {
+    private Map<String, LocalTime> prayers;
 
+    public PrayerSchedule(LocalTime fajr, LocalTime dhuhr, LocalTime asr,
+                          LocalTime maghrib, LocalTime isha){
+        prayers = new LinkedHashMap<>();
+        prayers.put("Fajr", fajr);
+        prayers.put("Dhuhr", dhuhr);
+        prayers.put("Asr", asr);
+        prayers.put("Maghrib", maghrib);
+        prayers.put("Isha", isha);
+    }
+
+    public LocalTime getPrayer(String prayer){
+        return prayers.get(prayer);
+    }
+
+    public Map<String, LocalTime> getAllPrayers(){
+        return prayers;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Prayer Schedule\n");
+        sb.append("---------------\n");
+        for (Map.Entry<String, LocalTime> entry : prayers.entrySet()) {
+            sb.append(String.format("%-10s %s%n", entry.getKey(), entry.getValue()));
+        }
+        return sb.toString();
+    }
 }
