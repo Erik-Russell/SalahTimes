@@ -5,6 +5,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -140,14 +141,34 @@ class PrayerTimesCalculator {
 
     public PrayerTimesCalculator(Location location){
         this.location = location;
-        IO.println("Made a PrayerTimesCalculator with location:\n" + this.location);
+        //IO.println("Made a PrayerTimesCalculator with location:\n" + this.location);
         this.solarCalc = new SolarCalculator(this.location);
     }
 
     public void calculateSolarPositions(){
-        double sunriseTime = this.solarCalc.getSunrise();
-        IO.println("sunrise: " + sunriseTime);
+        IO.println("fajr time: " + calcFajr());
+        IO.println("dhuhr time: " + calcDhuhr());
+        IO.println("Maghrib time: " + calcMaghrib());
+        IO.println("asr time: " + calcAsr());
+        IO.println("isha time: " + calcIsha());
     }
+
+    public LocalTime calcFajr(){
+        return this.solarCalc.getSunTimeOf(105, false);
+    }
+    public LocalTime calcDhuhr(){
+        return this.solarCalc.getSolarNoon();
+    }
+    public LocalTime calcAsr(){
+        return this.solarCalc.getAsr();
+    }
+    public LocalTime calcMaghrib(){
+        return this.solarCalc.getSunTimeOf(90.833, true);
+    }
+    public LocalTime calcIsha(){
+        return this.solarCalc.getSunTimeOf(105, true);
+    }
+
 
     @Override
     public String toString() {
@@ -184,25 +205,76 @@ class SolarCalculator {
         return 0.0;
     }
 
-    public double getSunrise() {
+    // convert timezone name to number offset
+    public double getTimeZoneDouble(String timezone){
+        ZoneId zone = ZoneId.of(timezone);
+        double offset = (double) ZonedDateTime.now(zone).getOffset().getTotalSeconds() / 3600;
+        return offset;
+    }
+
+    public LocalTime minutesToTime(double solarMinutes){
+        int hours = (int) solarMinutes / 60;
+        int minutes = (int) (solarMinutes % 60);
+        int seconds = (int) ((solarMinutes * 60) % 60);
+
+        LocalTime localTime = LocalTime.of(hours,minutes,seconds);
+
+        return localTime;
+    }
+
+    public LocalTime getSolarNoon() {
+        double offset = getTimeZoneDouble(this.location.timezone) * 60;
+        double longitude = this.location.longitude;
+        double eqtime = eqTime(fractionalYear(this.localDate));
+
+        double timeOfNoon = 720 - 4 * longitude - eqtime;
+
+        LocalTime localTimeOfNoon = minutesToTime(timeOfNoon + offset);
+
+        return localTimeOfNoon;
+    }
+
+    public LocalTime getSunTimeOf(double degreesFromZenith, boolean isAfternoon) {
         double y = fractionalYear(this.localDate);
         double eqtime = eqTime(y);
         double declination = decl(y);
         double latRadian = Math.toRadians(this.location.getLatitude());
+        double offset = getTimeZoneDouble(this.location.timezone) * 60; //hour to minutes
 
-        double hourAngle = Math.acos(Math.cos(Math.toRadians(90.833))
+        double hourAngle = Math.acos(Math.cos(Math.toRadians(degreesFromZenith))
                 / (Math.cos(latRadian) * Math.cos(declination))
                 - (Math.tan(latRadian) * Math.tan(declination)));
 
-        IO.println("DEBUG: hourAngle = " + hourAngle);
-
-        // convert to degrees for timeOfSunrise calculation
+        // convert to degrees for timeOf calculation
         hourAngle = Math.toDegrees(hourAngle);
 
-        // in minutes
-        double utcTimeOfSunrise = 720 - 4 * (this.location.getLongitude() + hourAngle) - eqtime;
+        if (isAfternoon){
+            hourAngle = -hourAngle;
+        }
 
-        return utcTimeOfSunrise / 60;
+        // in minutes
+        double utcTimeOf = 720 - 4 * (this.location.getLongitude() + hourAngle) - eqtime;
+
+        LocalTime localTimeOf = minutesToTime(utcTimeOf + offset);
+
+        return localTimeOf;
+    }
+
+    public LocalTime getAsr(){
+        double y = fractionalYear(this.localDate);
+        double declination = decl(y);
+        double latRadian = Math.toRadians(this.location.getLatitude());
+
+        double zenithNoon = Math.abs(Math.toDegrees(latRadian) - Math.toDegrees(declination));
+        double alphaNoon = Math.toRadians(90.0 - zenithNoon);
+        double alphaAsr = Math.atan(1.0 / (1.0 + (1.0 / Math.tan(alphaNoon))));
+
+        double cosHa = (Math.sin(alphaAsr) - Math.sin(latRadian) * Math.sin(declination))
+                / (Math.cos(latRadian) * Math.cos(declination));
+
+        double timeFromNoon = Math.toDegrees(Math.acos(cosHa)) / 15.0;
+        long totalSeconds = Math.round(timeFromNoon * 3600);
+        return getSolarNoon().plusSeconds(totalSeconds);
     }
 
     private double fractionalYear(Calendar localDate){
@@ -211,7 +283,6 @@ class SolarCalculator {
          *   numerator with hour variable is cast to double to match return type
          */
         double fractionalYear = ((2 * Math.PI) / 365) * (dayOfYear - 1 + ((double) (hour - 12) / 24));
-        IO.println("DEBUG: fractional year = " + fractionalYear);
         return fractionalYear;
     }
 
@@ -225,7 +296,6 @@ class SolarCalculator {
                         (0.032077 * Math.sin(y)) -
                         (0.014615 * Math.cos(2 * y)) -
                                 (0.040849 * Math.sin(2 * y)));
-        IO.println("DEBUG: equation of time = " + eqTime);
         return eqTime;
     }
 
@@ -240,21 +310,15 @@ class SolarCalculator {
                 (0.000907 * Math.sin(2 * y)) -
                 (0.002697 * Math.cos(3 * y)) +
                 (0.00148 * Math.sin(3 * y));
-        IO.println("DEBUG: declination = " + decl);
         return decl;
     }
 
     public double timeOffset(double eqTime, Location location, String timezone){
-        // convert timezone name to number offset
-        ZoneId zone = ZoneId.of(timezone);
-        double offset = (double) ZonedDateTime.now(zone).getOffset().getTotalSeconds() / 3600;
+        double offset = getTimeZoneDouble(timezone);
 
         double timeOffset = eqTime + 4 * location.longitude - 60 * offset;
-        IO.println("DEBUG: time_offset = " + timeOffset);
-        return timeOffset;
+        return timeOffset; // hours to minutes
     }
-
-    public double trueSolarTime(){ return 0.0; }
 
     public String toString() {
         return "\nlocation: " + this.location +
