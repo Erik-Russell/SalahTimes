@@ -47,6 +47,9 @@ Or run directly without building a jar:
 mvn clean compile exec:java
 ```
 
+### Public Repository
+https://github.com/Erik-Russell/SalahTimes
+
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.
