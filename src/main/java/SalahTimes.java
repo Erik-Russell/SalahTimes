@@ -16,7 +16,7 @@ import com.google.gson.Gson;
  * SalahTimes
  */
 public class SalahTimes {
-    static void main()
+    public static void main(String[] args)
             // IOException and InterruptedException required for HttpClient.send()
             throws IOException, InterruptedException {
         Scanner scanner = new Scanner(System.in);
